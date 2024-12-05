@@ -1,57 +1,226 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import math
 from generated.MyLangVisitor import MyLangVisitor
 from generated.MyLangParser import MyLangParser
-import os
-import pandas as pd
-import csv
 
 class MyLangInterpreter(MyLangVisitor):
 
     def __init__(self):
         self.variables = {}
+        self.functions = {}
+        self.global_env = {}
+
+    def translate_expr_stmt(self, ctx, indent=''):
+        expr_py = self.translate_expr_to_python(ctx.expr())
+        return f"{indent}{expr_py}"
 
     def visitAssign_stmt(self, ctx):
         var_name = ctx.IDENT().getText()
         value = self.visit(ctx.expr())
-        #print(f"Asignando: {var_name} = {value}")  # Depuración
+        print(f"Asignando: {var_name} = {value}")  # Depuración
         self.variables[var_name] = value
+        self.global_env[var_name] = value
         return value
 
+    def visitFunctiondef(self, ctx):
+        func_name = ctx.IDENT().getText()
+        params = [param.getText() for param in ctx.parametros().IDENT()] if ctx.parametros() else []
+        body_stmts = ctx.stmt()
+        indent = '    '  # Indentación para el cuerpo de la función
+        body_code = ''
+        for stmt in body_stmts:
+            stmt_code = self.translate_stmt_to_python(stmt, indent)
+            body_code += f"{stmt_code}\n"
+    
+        params_str = ", ".join(params)
+        func_code = f"def {func_name}({params_str}):\n{body_code}"
+        print(f"Definiendo función en Python:\n{func_code}")
+        exec(func_code, self.global_env)
+    
+    def visitFunc_call(self, ctx):
+        func_name = ctx.IDENT().getText()
+        args = [self.translate_expr_to_python(expr) for expr in ctx.expr()]
+        args_str = ", ".join(args)
+        call_code = f"{func_name}({args_str})"
+        print(f"Ejecutando llamada a función en Python:\n{call_code}")
+        result = eval(call_code, self.global_env)
+        return result
+    
+    def translate_stmt_to_python(self, stmt, indent=''):
+        if isinstance(stmt, MyLangParser.StmtContext):
+            if stmt.assign_stmt():
+                return self.translate_assign_stmt(stmt.assign_stmt(), indent)
+            elif stmt.print_stmt():
+                return self.translate_print_stmt(stmt.print_stmt(), indent)
+            elif stmt.cond_stmt():
+                return self.translate_cond_stmt(stmt.cond_stmt(), indent)
+            elif stmt.expr_stmt():
+                return self.translate_expr_stmt(stmt.expr_stmt(), indent)
+            elif stmt.for_stmt():
+                return self.translate_for_stmt(stmt.for_stmt(), indent)
+            elif stmt.while_stmt():
+                return self.translate_while_stmt(stmt.while_stmt(), indent)
+            elif stmt.array_append():
+                return self.translate_array_append(stmt.array_append(), indent)
+            elif stmt.return_stmt():  # Añadir esta condición
+                return self.translate_return_stmt(stmt.return_stmt(), indent)
+            else:
+                raise NotImplementedError(f"Traducción no implementada para el tipo de sentencia en stmt: {stmt.getText()}")
+        elif isinstance(stmt, MyLangParser.Return_stmtContext):  # Manejar directamente Return_stmtContext
+            return self.translate_return_stmt(stmt, indent)
+        else:
+            raise NotImplementedError(f"Traducción no implementada para {type(stmt)}")
+
+    
+    def translate_expr_to_python(self, ctx):
+        # Handle array expressions
+        if isinstance(ctx, MyLangParser.Array_exprContext):
+            if ctx.getChildCount() == 4:  # Array access
+                array_name = ctx.IDENT().getText()
+                index = self.translate_expr_to_python(ctx.expr(0))
+                return f"{array_name}[{index}]"
+            else:  # Array literal
+                values = [self.translate_expr_to_python(e) for e in ctx.expr()]
+                return f"[{', '.join(values)}]"
+        elif ctx.array_expr():
+            return self.translate_expr_to_python(ctx.array_expr())
+        elif ctx.NUMBER():
+            return ctx.NUMBER().getText()
+        elif ctx.STRING():
+            return ctx.STRING().getText()
+        elif ctx.IDENT():
+            return ctx.IDENT().getText()
+        elif ctx.func_call():
+            func_name = ctx.func_call().IDENT().getText()
+            args = [self.translate_expr_to_python(e) for e in ctx.func_call().expr()]
+            args_str = ", ".join(args)
+            return f"{func_name}({args_str})"
+        elif ctx.getChildCount() == 3:
+            left = self.translate_expr_to_python(ctx.expr(0))
+            op = ctx.getChild(1).getText()
+            right = self.translate_expr_to_python(ctx.expr(1))
+            return f"({left} {op} {right})"
+        else:
+            raise NotImplementedError(f"Traducción de expresión no implementada para: {ctx.getText()}")
+    
+    def translate_condition_to_python(self, ctx):
+        left = self.translate_expr_to_python(ctx.expr(0))
+        op = ctx.getChild(1).getText()
+        right = self.translate_expr_to_python(ctx.expr(1))
+        return f"({left} {op} {right})"
+    
+    def translate_assign_stmt(self, ctx, indent=''):
+        var_name = ctx.IDENT().getText()
+        expr_py = self.translate_expr_to_python(ctx.expr())
+        return f"{indent}{var_name} = {expr_py}"
+
+    def translate_print_stmt(self, ctx, indent=''):
+        exprs = ctx.expr()
+        exprs_py = ', '.join([self.translate_expr_to_python(e) for e in exprs])
+        return f"{indent}print({exprs_py})"
+
+    def translate_cond_stmt(self, ctx):
+        condition_py = self.translate_condition_to_python(ctx.condition())
+        if_body = '\n'.join([f"    {self.translate_stmt_to_python(s)}" for s in ctx.stmt()])
+        else_body = ""
+        if ctx.ELSE():
+            else_body = '\n'.join([f"    {self.translate_stmt_to_python(s)}" for s in ctx.stmt()[len(ctx.stmt())//2:]])
+        return f"if {condition_py}:\n{if_body}\nelse:\n{else_body}"
+    
+    def translate_array_append(self, ctx, indent=''):
+        array_name = ctx.IDENT().getText()
+        value = self.translate_expr_to_python(ctx.expr())
+        return f"{indent}{array_name}.append({value})"
+    
+    def translate_condition_to_python(self, ctx):
+        left = self.translate_expr_to_python(ctx.expr(0))
+        op = ctx.getChild(1).getText()
+        right = self.translate_expr_to_python(ctx.expr(1))
+        return f"({left} {op} {right})"
+
+    def translate_for_stmt(self, ctx, indent=''):
+        var_name = ctx.IDENT().getText()
+        if ctx.range_():
+            # Caso 1: Iteración usando range
+            range_expr = ctx.range_()
+            start = self.translate_expr_to_python(range_expr.expr(0))
+            end = self.translate_expr_to_python(range_expr.expr(1))
+            if len(range_expr.expr()) > 2:
+                step = self.translate_expr_to_python(range_expr.expr(2))
+                iterable_py = f"range({start}, {end}, {step})"
+            else:
+                iterable_py = f"range({start}, {end})"
+        else:
+            # Caso 2: Iteración sobre una expresión (lista u otro iterable)
+            iterable_expr = ctx.expr()
+            iterable_py = self.translate_expr_to_python(iterable_expr)
+        new_indent = indent + '    '
+        body_code = ''
+        for stmt in ctx.stmt():
+            stmt_code = self.translate_stmt_to_python(stmt, new_indent)
+            body_code += f"{stmt_code}\n"
+        return f"{indent}for {var_name} in {iterable_py}:\n{body_code}"
+    
+    def translate_return_stmt(self, ctx, indent=''):
+        expr_py = self.translate_expr_to_python(ctx.expr())
+        return f"{indent}return {expr_py}"
+    
     def visitExpr(self, ctx):
-        # Caso de cadenas de texto
-        if ctx.STRING():
-            return ctx.STRING().getText().strip('"')  # Eliminar las comillas alrededor de la cadena
+        # Handle array expressions first
+        if ctx.array_expr():
+            return self.visitArray_expr(ctx.array_expr())
         
-        # Caso de funciones matemáticas
+        # Handle function calls
+        if ctx.func_call():
+            return self.visitFunc_call(ctx.func_call())
+    
+        # Handle strings
+        if ctx.STRING():
+            return ctx.STRING().getText().strip('"')  # Remove quotes around the string
+    
+        # Handle math functions
         if ctx.math_func():
             return self.visitMath_func(ctx.math_func())
-
-        # Caso de operaciones aritméticas
+    
+        # Handle arithmetic operations
         if ctx.getChildCount() == 3:  # expr op expr
             left = self.visit(ctx.expr(0))
             right = self.visit(ctx.expr(1))
             op = ctx.getChild(1).getText()
-
-            #print(f"Evaluando: {left} {op} {right}")  # Depuración
-
+    
+            print(f"Evaluando: {left} {op} {right}")  # Debugging
+    
             if left is None or right is None:
                 raise ValueError("Una de las subexpresiones no pudo evaluarse correctamente.")
-
-            # Operaciones aritméticas
-            if op == '+':
-                return left + right
-            elif op == '-':
-                return left - right
-            elif op == '*':
-                return left * right
-            elif op == '/':
-                return left / right
-            elif op == '%':
-                return left % right
-            # Comparaciones condicionales
-            elif op == '>':
+    
+            # Arithmetic operations
+            if isinstance(left, list) and isinstance(right, list):
+                left = np.array(left)
+                right = np.array(right)
+                if op == '+':
+                    return (left + right).tolist()
+                elif op == '-':
+                    return (left - right).tolist()
+                elif op == '*':
+                    return (left @ right).tolist()  # Matrix multiplication
+                elif op == '/':
+                    return (left / right).tolist()
+                elif op == '%':
+                    return (left % right).tolist()
+            else:
+                if op == '+':
+                    return left + right
+                elif op == '-':
+                    return left - right
+                elif op == '*':
+                    return left * right
+                elif op == '/':
+                    return left / right
+                elif op == '%':
+                    return left % right
+    
+            # Conditional comparisons
+            if op == '>':
                 return left > right
             elif op == '<':
                 return left < right
@@ -59,24 +228,47 @@ class MyLangInterpreter(MyLangVisitor):
                 return left == right
             elif op == '!=':
                 return left != right
-        elif ctx.getChildCount() == 2 and ctx.getChild(1).getText() == 'T':  # Caso de transposición
-            matrix = self.visit(ctx.expr(0))  # Obtener la matriz
-            return np.transpose(matrix).tolist()  # Usar numpy para transponer
-        elif ctx.getChildCount() == 2 and ctx.getChild(0).getText() == 'inv':  # Caso de inversa
-            matrix = self.visit(ctx.expr(0))  # Obtener la matriz
+    
+        # Handle transposition
+        if ctx.getChildCount() == 2 and ctx.getChild(1).getText() == 'T':
+            matrix = self.visit(ctx.expr(0))  # Get the matrix
+            return np.transpose(matrix).tolist()  # Use numpy to transpose
+    
+        # Handle inverse
+        if ctx.getChildCount() == 2 and ctx.getChild(0).getText() == 'inv':
+            matrix = self.visit(ctx.expr(0))  # Get the matrix
             try:
-                return np.linalg.inv(matrix).tolist()  # Usar numpy para la inversa
+                return np.linalg.inv(matrix).tolist()  # Use numpy for inverse
             except np.linalg.LinAlgError:
                 raise ValueError("La matriz no es invertible.")
-        elif ctx.array_expr():  # Array expression
-            return self.visit(ctx.array_expr())
-        elif ctx.NUMBER():  # Número
+    
+        # Handle array expressions
+        if ctx.array_expr():
+            return self.visitArray_expr(ctx.array_expr())
+    
+        # Handle numbers
+        if ctx.NUMBER():
             return float(ctx.NUMBER().getText())
-        elif ctx.IDENT():  # Variable
+    
+        # Handle variables and module attributes
+        if ctx.IDENT():
             var_name = ctx.IDENT().getText()
-            if var_name not in self.variables:
-                raise ValueError(f"Variable '{var_name}' no definida.")
-            return self.variables.get(var_name)
+            parts = var_name.split('.')
+            obj = self.global_env
+            if var_name in self.variables:
+                        return self.variables[var_name]
+            elif var_name in self.global_env:
+                        return self.global_env[var_name]
+            else:
+                parts = var_name.split('.')
+                if len(parts) > 1:
+                    module = parts[0]
+                    attr = parts[1]
+                    if module in self.global_env:
+                            return getattr(self.global_env[module], attr)
+                    raise ValueError(f"Variable o atributo '{var_name}' no definido.")
+            return obj
+    
         return None
 
     def visitMath_func(self, ctx):
@@ -150,89 +342,13 @@ class MyLangInterpreter(MyLangVisitor):
             return math.cosh(expr)
         elif func_name == 'tanh':
             return math.tanh(expr)
-
-    def visitPlot_stmt(self, ctx):
-        x_var_name = ctx.IDENT(0).getText()
-        y_var_name = ctx.IDENT(1).getText()
-
-        # Obtener valores
-        x = self.variables.get(x_var_name)
-        y = self.variables.get(y_var_name)
-
-        # Manejo de errores
-        if x is None or y is None:
-            raise ValueError(f"Variables no definidas: {x_var_name}, {y_var_name}")
-        if len(x) != len(y):
-            raise ValueError(f"Las listas deben tener el mismo tamaño: {len(x)} != {len(y)}")
-
-        # Obtener configuraciones opcionales
-        title = ctx.STRING(0).getText().strip('"') if ctx.STRING(0) else ""
-        xlabel = ctx.STRING(1).getText().strip('"') if ctx.STRING(1) else x_var_name
-        ylabel = ctx.STRING(2).getText().strip('"') if ctx.STRING(2) else y_var_name
-        style = ctx.STRING(3).getText().strip('"') if ctx.STRING(3) else "b-"
-
-        # Crear gráfica
-        plt.plot(x, y, style)
-        plt.title(title)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.grid(True)
-        plt.show()
-
-    def visitFile_stmt(self, ctx):
-            action = ctx.getChild(0).getText()
-            filename = ctx.STRING(0).getText().strip('"')
-            if action == 'write':
-                content = ctx.STRING(1).getText().strip('"')
-                content = content.replace('\\n', '\n')  # Reemplazar \n por nuevas líneas
-                with open(filename, 'w') as f:
-                    f.write(content)
-            elif action == 'read':
-                if filename.endswith('.csv'):
-                    with open(filename, 'r') as f:
-                        reader = csv.reader(f)
-                        content = [row for row in reader]
-                        print(content)  # Imprimir el contenido leído
-                elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-                    df = pd.read_excel(filename)
-                    content = df.to_dict(orient='list')
-                    print(content)  # Imprimir el contenido leído
-                else:
-                    with open(filename, 'r') as f:
-                        content = f.read()
-                        print(content)  # Imprimir el contenido leído
-            else:
-                raise ValueError(f"Acción de archivo desconocida: {action}")
-
-    def visitRegression_stmt(self, ctx):
-        x_var_name = ctx.IDENT(0).getText()
-        y_var_name = ctx.IDENT(1).getText()
-        slope_var_name = ctx.IDENT(2).getText()
-        intercept_var_name = ctx.IDENT(3).getText()
-
-        x = np.array(self.variables.get(x_var_name))
-        y = np.array(self.variables.get(y_var_name))
-
-        if x is None or y is None:
-            raise ValueError(f"Variables no definidas: {x_var_name}, {y_var_name}")
-
-        if len(x) != len(y):
-            raise ValueError(f"Las listas deben tener el mismo tamaño: {len(x)} != {len(y)}")
-
-        A = np.vstack([x, np.ones(len(x))]).T
-        slope, intercept = np.linalg.lstsq(A, y, rcond=None)[0]
-
-        self.variables[slope_var_name] = slope
-        self.variables[intercept_var_name] = intercept
-
-        print(f"Regresión lineal: y = {slope}x + {intercept}")
     
     def visitPrint_stmt(self, ctx):
         values = []
         for expr_ctx in ctx.expr():
             value = self.visit(expr_ctx)
             
-            #print(f"Evaluando expresión: {expr_ctx.getText()} -> {value}")  # Debugging
+            print(f"Evaluando expresión: {expr_ctx.getText()} -> {value}")  # Debugging
             if isinstance(value, str):
                 values.append(f'"{value}"')
             elif value is None:
@@ -262,13 +378,23 @@ class MyLangInterpreter(MyLangVisitor):
             raise ValueError("La matriz no es invertible.")
         
     def visitArray_expr(self, ctx):
-        #print(f"Visitando array: {ctx.getText()}")  # Depuración
-        if ctx.getChildCount() == 3:  # IDENT '[' expr ']'
+        print(f"Visitando array: {ctx.getText()}")  # Debugging
+        if ctx.getChildCount() == 4:  # IDENT '[' expr ']'
             array_name = ctx.IDENT().getText()
             index = self.visit(ctx.expr(0))
-            return self.variables[array_name][index]
+            if array_name in self.variables:
+                # Convert index to integer
+                if isinstance(index, float):
+                    index = int(index)
+                return self.variables[array_name][index]
+            else:
+                raise ValueError(f"Array '{array_name}' no definido")
         else:  # '[' expr (',' expr)* ']'
-            return [self.visit(expr) for expr in ctx.expr()]
+            values = []
+            for expr_ctx in ctx.expr():
+                value = self.visit(expr_ctx)
+                values.append(value)
+            return values
 
     def visitArray_op(self, ctx):
         # Acceder correctamente a las subexpresiones del array
@@ -282,7 +408,7 @@ class MyLangInterpreter(MyLangVisitor):
         elif op == '-':
             return (left - right).tolist()
         elif op == '*':
-            return (left * right).tolist()
+            return (left @ right).tolist()  # Multiplicación de matrices
         elif op == '/':
             return (left / right).tolist()
         elif op == 'T':  # Transposición
@@ -296,22 +422,22 @@ class MyLangInterpreter(MyLangVisitor):
         """
         Evalúa las sentencias condicionales 'if' y 'else'.
         """
-        # Evaluamos la condición
-        condition = self.visit(ctx.condition())  # La condición que se evalúa
+        # Evaluamos la condición del 'if'
+        condition = self.visit(ctx.condition())  # La primera condición que se evalúa
         
-        #print(f"Evaluando condición: {condition}")  # Depuración
+        print(f"Evaluando condición 'if': {condition}")  # Depuración
         
         if condition:  # Si la condición es verdadera
-            #print("Ejecutando bloque 'if'")
+            print("Ejecutando bloque 'if'")
             for stmt in ctx.stmt()[:ctx.stmt().index(ctx.getChild(ctx.getChildCount() - 1))]:  # Ejecutar las sentencias dentro del 'if'
                 self.visit(stmt)
-        elif ctx.getChildCount() > 4 and ctx.getChild(4).getText() == 'else:':  # Verifica si hay un bloque 'else'
-            #print("Ejecutando bloque 'else'")
-            for stmt in ctx.stmt()[ctx.stmt().index(ctx.getChild(ctx.getChildCount() - 1)):]:  # Ejecutar las sentencias dentro del 'else'
-                self.visit(stmt)
-
-
-
+        else:
+            # Si ninguna condición 'if' se cumple, ejecutar el bloque 'else'
+            if ctx.getChildCount() > 4 and ctx.getChild(ctx.getChildCount() - 4).getText() == 'else':
+                print("Ejecutando bloque 'else'")
+                else_index = len(ctx.stmt()) - 1  # Índice del bloque 'else'
+                for stmt in ctx.stmt()[else_index:]:
+                    self.visit(stmt)
 
     def visitCondition(self, ctx):
         # Evaluar la condición (comparación entre dos expresiones)
@@ -319,7 +445,7 @@ class MyLangInterpreter(MyLangVisitor):
         right = self.visit(ctx.expr(1))  # Segundo lado de la comparación
         operator = ctx.getChild(1).getText()  # El operador de comparación
 
-        #print(f"Comparando: {left} {operator} {right}")  # Depuración
+        print(f"Comparando: {left} {operator} {right}")  # Depuración
         
         # Evaluamos la comparación según el operador
         if operator == '>':
@@ -334,64 +460,53 @@ class MyLangInterpreter(MyLangVisitor):
             raise ValueError(f"Operador desconocido: {operator}")
     
     def visitFor_stmt(self, ctx):
-        """
-        Ejecuta un bucle 'for', donde var_name es la variable de iteración y el rango es especificado
-        por la expresión de inicio, fin y paso, o una lista.
-        """
         var_name = ctx.IDENT().getText()  # Nombre de la variable de iteración
-    
+        
         # Obtener el rango o la lista
         range_or_list_expr = ctx.getChild(3)
-    
+        
+        print(f"range_or_list_expr: {range_or_list_expr}")  # Debugging
+
         # Verificar si es un rango o una lista
         if isinstance(range_or_list_expr, MyLangParser.Range_Context):
-            # Evaluar los valores del rango (start, end y step)
+            # Rango de valores
             range_expr = range_or_list_expr
             start_expr = range_expr.expr(0)
             end_expr = range_expr.expr(1)
-            
+
             start = self.visit(start_expr)
             end = self.visit(end_expr)
             
-            # Asegurarse de que start y end sean numéricos
+            # Asegúrate de que start y end sean numéricos
             if not isinstance(start, (int, float)) or not isinstance(end, (int, float)):
                 raise ValueError(f"El rango debe contener valores numéricos: start={start}, end={end}")
-    
+
             # Paso opcional
             step = 1  # Paso por defecto
             if len(range_expr.expr()) == 3:  # Si se especifica un paso
                 step_expr = range_expr.expr(2)
                 step = self.visit(step_expr)
                 
-                # Asegurarse de que el valor de 'step' sea numérico
                 if not isinstance(step, (int, float)):
                     raise ValueError(f"El paso debe ser un valor numérico: {step}")
-    
-            # Ajustar el rango para incluir el límite superior (para bucles ascendentes)
-            if step > 0:
-                end += 1
-            else:
-                end -= 1
-    
-            # Iterar sobre el rango ajustado
+
+            # Iterar sobre el rango
             for i in range(int(start), int(end), int(step)):
-                self.variables[var_name] = i  # Asignar el valor de la variable de iteración
-                for stmt in ctx.stmt():  # Ejecutar las sentencias dentro del bloque del 'for'
-                    self.visit(stmt)
-        else:
-            # Evaluar la lista
-            iterable = self.visit(range_or_list_expr)
-            
-            # Asegurarse de que sea una lista
-            if not isinstance(iterable, list):
-                raise ValueError(f"Se esperaba una lista para iterar: {iterable}")
-    
-            # Iterar sobre la lista
-            for item in iterable:
-                self.variables[var_name] = item  # Asignar el valor de la variable de iteración
-                for stmt in ctx.stmt():  # Ejecutar las sentencias dentro del bloque del 'for'
+                self.variables[var_name] = i
+                for stmt in ctx.stmt():
                     self.visit(stmt)
 
+        else:
+            # Si es una lista, iterar sobre ella
+            iterable = self.visit(range_or_list_expr)
+            
+            if not isinstance(iterable, list):
+                raise ValueError(f"Se esperaba una lista para iterar: {iterable}")
+
+            for item in iterable:
+                self.variables[var_name] = item
+                for stmt in ctx.stmt():
+                    self.visit(stmt)
 
     def visitWhile_stmt(self, ctx):
         """
@@ -400,7 +515,7 @@ class MyLangInterpreter(MyLangVisitor):
         # Evaluamos la condición
         condition = self.visit(ctx.condition())  # La condición a evaluar
         
-        #print(f"Evaluando condición: {condition}")  # Depuración
+        print(f"Evaluando condición: {condition}")  # Depuración
 
         # Ejecutar el bloque de código mientras la condición sea verdadera
         while condition:
@@ -410,10 +525,99 @@ class MyLangInterpreter(MyLangVisitor):
             # Re-evaluar la condición después de ejecutar el bloque
             condition = self.visit(ctx.condition())
 
-
-
-
-
-
-
-
+    def visitArray_append(self, ctx):
+        array_name = ctx.IDENT().getText()
+        value = self.visit(ctx.expr())
+        if array_name in self.variables:
+            self.variables[array_name].append(value)
+        else:
+            raise ValueError(f"Array '{array_name}' no definido.")
+        print(f"Agregado {value} a {array_name}")
+    
+    def visitImport_stmt(self, ctx):
+        modules = [ident.getText() for ident in ctx.IDENT()]
+        for module_name in modules:
+            try:
+                # Handle module with dots (e.g., matplotlib.pyplot)
+                if '.' in module_name:
+                    base_module = module_name.split('.')[0]
+                    submodule = module_name.split('.')[1]
+                    
+                    # Import base module
+                    exec(f"import {base_module}", self.global_env)
+                    self.global_env[base_module] = __import__(base_module)
+                    
+                    # Import submodule
+                    exec(f"from {base_module} import {submodule}", self.global_env)
+                    self.global_env[f"{base_module}_{submodule}"] = getattr(self.global_env[base_module], submodule)
+                else:
+                    exec(f"import {module_name}", self.global_env)
+                    self.global_env[module_name] = __import__(module_name)
+                print(f"Importado módulo: {module_name}")
+            except ImportError as e:
+                raise ValueError(f"Error importando módulo {module_name}: {str(e)}")
+    
+    def visitFile_open_stmt(self, ctx):
+        var_name = ctx.IDENT().getText()
+        filename = self.visit(ctx.expr(0))
+        mode = self.visit(ctx.expr(1))
+        
+        try:
+            # Remove quotes if present
+            if isinstance(filename, str):
+                filename = filename.strip('"')
+            if isinstance(mode, str):    
+                mode = mode.strip('"')
+                
+            file_obj = open(filename, mode)
+            self.variables[var_name] = file_obj
+            self.global_env[var_name] = file_obj  # Add to global environment
+            print(f"Abrir archivo: {filename} en modo '{mode}'")
+            return file_obj
+        except Exception as e:
+            raise ValueError(f"Error al abrir archivo: {str(e)}")
+    
+    def visitFile_read_stmt(self, ctx):
+        var_name = ctx.IDENT(0).getText()
+        file_var_name = ctx.IDENT(1).getText()
+        if file_var_name in self.variables:
+            file_obj = self.variables[file_var_name]
+            try:
+                content = file_obj.read()
+                self.variables[var_name] = content
+                print(f"Asignando: {var_name} = contenido leído de '{file_var_name}'")
+            except Exception as e:
+                print(f"Error al leer de archivo '{file_var_name}': {e}")
+        else:
+            print(f"Archivo '{file_var_name}' no está abierto.")
+    
+    def visitFile_write_stmt(self, ctx):
+        file_var_name = ctx.IDENT().getText()
+        content = self.visit(ctx.expr())
+        
+        if file_var_name in self.variables:
+            file_obj = self.variables[file_var_name]
+            try:
+                if isinstance(content, str):
+                    content = content.strip('"')  # Remove quotes if present
+                file_obj.write(str(content))
+                print(f"Escribiendo en '{file_var_name}': {content}")
+                return True
+            except Exception as e:
+                raise ValueError(f"Error al escribir en archivo '{file_var_name}': {str(e)}")
+        raise ValueError(f"Archivo '{file_var_name}' no está abierto")
+    
+    def visitFile_close_stmt(self, ctx):
+        file_var_name = ctx.IDENT().getText()
+        if file_var_name in self.variables:
+            file_obj = self.variables[file_var_name]
+            try:
+                file_obj.close()
+                del self.variables[file_var_name]
+                if file_var_name in self.global_env:
+                    del self.global_env[file_var_name]  # Remove from global environment
+                print(f"Archivo '{file_var_name}' cerrado.")
+            except Exception as e:
+                raise ValueError(f"Error al cerrar archivo '{file_var_name}': {str(e)}")
+        else:
+            raise ValueError(f"Archivo '{file_var_name}' no está abierto")

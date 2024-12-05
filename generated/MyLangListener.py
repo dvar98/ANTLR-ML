@@ -89,6 +89,15 @@ class MyLangListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by MyLangParser#regression_stmt.
+    def enterRegression_stmt(self, ctx:MyLangParser.Regression_stmtContext):
+        pass
+
+    # Exit a parse tree produced by MyLangParser#regression_stmt.
+    def exitRegression_stmt(self, ctx:MyLangParser.Regression_stmtContext):
+        pass
+
+
     # Enter a parse tree produced by MyLangParser#expr.
     def enterExpr(self, ctx:MyLangParser.ExprContext):
         pass

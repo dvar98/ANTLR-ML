@@ -54,6 +54,11 @@ class MyLangVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by MyLangParser#regression_stmt.
+    def visitRegression_stmt(self, ctx:MyLangParser.Regression_stmtContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by MyLangParser#expr.
     def visitExpr(self, ctx:MyLangParser.ExprContext):
         return self.visitChildren(ctx)
