@@ -100,6 +100,9 @@ class MyLangInterpreter(MyLangVisitor):
             op = ctx.getChild(1).getText()
             right = self.translate_expr_to_python(ctx.expr(1))
             return f"({left} {op} {right})"
+        elif ctx.getChildCount() == 2 and ctx.getChild(0).getText() == '-':
+            value = self.translate_expr_to_python(ctx.expr(0))
+            return f"-{value}"
         else:
             raise NotImplementedError(f"Traducción de expresión no implementada para: {ctx.getText()}")
     
@@ -166,6 +169,29 @@ class MyLangInterpreter(MyLangVisitor):
         return f"{indent}return {expr_py}"
     
     def visitExpr(self, ctx):
+            # Manejar expresiones entre paréntesis
+        if ctx.getChildCount() == 3 and ctx.getChild(0).getText() == '(':
+            return self.visit(ctx.expr(0))
+
+        # Manejar operaciones aritméticas
+        if ctx.getChildCount() == 3:
+            left = self.visit(ctx.expr(0))
+            op = ctx.getChild(1).getText()
+            right = self.visit(ctx.expr(1))
+
+            print(f"Evaluando: {left} {op} {right}")  # Depuración
+
+            if op == '+':
+                return left + right
+            elif op == '-':
+                return left - right
+            elif op == '*':
+                return left * right
+            elif op == '/':
+                return left / right
+            elif op == '%':
+                return left % right
+        
         # Handle array expressions first
         if ctx.array_expr():
             return self.visitArray_expr(ctx.array_expr())
@@ -350,7 +376,7 @@ class MyLangInterpreter(MyLangVisitor):
             
             print(f"Evaluando expresión: {expr_ctx.getText()} -> {value}")  # Debugging
             if isinstance(value, str):
-                values.append(f'"{value}"')
+                values.append(value)
             elif value is None:
                 values.append("None")
             else:
@@ -423,21 +449,24 @@ class MyLangInterpreter(MyLangVisitor):
         Evalúa las sentencias condicionales 'if' y 'else'.
         """
         # Evaluamos la condición del 'if'
-        condition = self.visit(ctx.condition())  # La primera condición que se evalúa
+        condition = self.visit(ctx.condition())
+        print(f"Evaluando condición 'if': {condition}")
         
-        print(f"Evaluando condición 'if': {condition}")  # Depuración
+        # Obtener todas las sentencias
+        stmts = ctx.stmt()
+        # Dividir las sentencias en dos grupos: if y else
+        mid = len(stmts) // 2
         
-        if condition:  # Si la condición es verdadera
+        if condition:
             print("Ejecutando bloque 'if'")
-            for stmt in ctx.stmt()[:ctx.stmt().index(ctx.getChild(ctx.getChildCount() - 1))]:  # Ejecutar las sentencias dentro del 'if'
+            # Ejecutar primera mitad (bloque if)
+            for stmt in stmts[:mid]:
                 self.visit(stmt)
         else:
-            # Si ninguna condición 'if' se cumple, ejecutar el bloque 'else'
-            if ctx.getChildCount() > 4 and ctx.getChild(ctx.getChildCount() - 4).getText() == 'else':
-                print("Ejecutando bloque 'else'")
-                else_index = len(ctx.stmt()) - 1  # Índice del bloque 'else'
-                for stmt in ctx.stmt()[else_index:]:
-                    self.visit(stmt)
+            print("Ejecutando bloque 'else'")
+            # Ejecutar segunda mitad (bloque else)
+            for stmt in stmts[mid:]:
+                self.visit(stmt)
 
     def visitCondition(self, ctx):
         # Evaluar la condición (comparación entre dos expresiones)

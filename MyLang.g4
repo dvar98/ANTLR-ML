@@ -23,7 +23,7 @@ stmt
     ;
 
 print_stmt
-    : 'print' '(' expr (',' expr)* ')'
+    : 'cout' '(' expr (',' expr)* ')'
     ;
 
 assign_stmt
@@ -152,7 +152,7 @@ IDENT
     ;
 
 NUMBER
-    : INT | FLOAT
+    : '-'? [0-9]+ ('.' [0-9]+)?
     ;
 
 STRING
@@ -161,14 +161,6 @@ STRING
 
 WS
     : [ \t\n\r]+ -> skip
-    ;
-
-INT
-    : [0-9]+
-    ;
-
-FLOAT
-    : [0-9]+ '.' [0-9]* | '.' [0-9]+
     ;
 
 COMMENT
