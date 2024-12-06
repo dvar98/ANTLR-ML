@@ -1,3 +1,311 @@
-Primera línea
-Segunda línea
-Tercera línea
+# Basic arithmetic with parentheses
+a = (5 + 3) * 2
+cout("(5 + 3) * 2 =", a)
+
+# Multiple nested parentheses 
+b = (10 - (4 + 2)) * 3 
+cout("(10 - (4 + 2)) * 3 =", b)
+
+# Parentheses with division
+c = 20 / (5 + 3)
+cout("20 / (5 + 3) =", c)
+
+# Mix of operations 
+d = (15 / 3 + 2) * (8 - 5)
+cout("(15 / 3 + 2) * (8 - 5) =", d)
+
+# With variables
+x = 10
+y = 5
+z = (x + y) * (x - y)
+cout("(x + y) * (x - y) =", z)
+
+
+# Declaración de variables
+x = 10
+y = 20
+
+# Operaciones aritméticas y matrices
+z = x + y
+cout("La suma de x e y es:", z)
+
+
+# Funciones matemáticas
+angulo = degrees(45)
+seno = sin(angulo)
+cout("Seno de 45 grados:", seno)
+
+
+# Bucles
+matriz = [1, 5, 3, 4, 5]
+for i in matriz:
+    cout("Valor de i:", i)
+end
+
+for i in 0, 5, 1:
+    cout("Valor de i:", i)
+end
+
+# Funciones con arreglos y matrices
+matriz = [[1, 2], [3, 4]]
+matriz1 = [[5,6],[7,8]]
+transpuesta = matriz T
+inversa = inv matriz
+multiplicacion = matriz1 * matriz
+suma = matriz1 + matriz
+resta = matriz1 - matriz
+print("suma:", suma )
+print("resta:", resta)
+print("multiplicacion:", multiplicacion)
+print("Transpuesta:", transpuesta)
+print("Inversa:", inversa)
+
+# Condicionales
+if x > y:
+    print("x es mayor que y")
+else:
+    print("x no es mayor que y")
+end
+
+# Definir función
+funcion suma(a, b) {
+    resultado = a + b
+    print("Resultado de la suma:", resultado)
+}
+
+# Llamar a la función
+suma(10, 20)
+
+# Definir función que agrega elementos a una lista
+funcion agregar_elementos(lista, n) {
+    for i in 0, n, 1:
+        lista.append(i)
+    end
+    print("Lista después de agregar elementos:", lista)
+}
+
+# Crear una lista vacía
+mi_lista = []
+
+# Llamar a la función para agregar elementos a la lista
+agregar_elementos(mi_lista, 5)
+
+# Definir función
+funcion suma(a, b) {
+    resultado = a + b
+    return resultado
+}
+
+# Llamar a la función
+resultado = suma(10, 20)
+print("Resultado de la suma:", resultado)
+
+#Importaciones simples 
+import random 
+
+a = random.randint(2,5)
+print(a)
+
+#Importaciones externas
+import numpy
+import matplotlib.pyplot
+
+a = numpy.array([1, 2, 3])
+print(a)
+
+plt = matplotlib.pyplot
+plt.plot([1,2,3], [1,2,3])
+plt.show()
+
+#Importaciones mas complejas
+import numpy, matplotlib.pyplot
+
+# Define data
+categorias = ["A", "B", "C", "D", "E"]
+valores1 = [25, 30, 15, 20, 28]
+valores2 = [18, 22, 25, 15, 20]
+valores3 = [20, 28, 12, 18, 22]
+
+# Bar width
+ancho = 0.2
+
+# Calculate bar positions
+pos1 = [0, 1, 2, 3, 4]  # Base positions for first series
+pos2 = [0.2, 1.2, 2.2, 3.2, 4.2]  # Shifted positions for second series
+pos3 = [0.4, 1.4, 2.4, 3.4, 4.4]  # Shifted positions for third series
+
+# Create plot
+plt = matplotlib.pyplot
+
+# Create bars
+plt.figure(10)
+plt.bar(pos1, valores1, ancho)
+plt.bar(pos2, valores2, ancho)
+plt.bar(pos3, valores3, ancho)
+
+# Set x-axis ticks and labels
+plt.xticks([0.2, 1.2, 2.2, 3.2, 4.2], categorias)  # Position ticks in middle of bar groups
+
+# Customize plot
+plt.title("Gráfica de Barras")
+plt.xlabel("Categorías")
+plt.ylabel("Valores")
+
+# Add legend
+plt.legend(["Serie 1", "Serie 2", "Serie 3"])
+
+# Show plot
+plt.show()
+
+# Print statistics
+print(numpy.mean(valores1))
+print(numpy.mean(valores2))
+print(numpy.mean(valores3))
+
+#Manejo de archivos
+
+# Abrir un archivo para escritura
+f = open("mi_archivo.txt", "w")
+
+# Escribir en el archivo
+f.write("Hola, este es un archivo de prueba.\nSegunda línea.")
+
+# Cerrar el archivo
+f.close()
+
+# Abrir el archivo para lectura
+f = open("mi_archivo.txt", "r")
+
+# Leer contenido del archivo
+contenido = f.read()
+
+# Imprimir el contenido leído
+print(contenido)
+
+# Cerrar el archivo
+f.close()
+
+# Define function to calculate sum and mean
+funcion calcular_estadisticas(lista) {
+    suma = 0
+    contador = 0
+    
+    # Calculate sum and count elements
+    for x in lista:
+        suma = suma + x
+        contador = contador + 1
+    end
+    
+    # Calculate mean
+    media = suma / contador
+    
+    # Return results
+    return [suma, media]
+}
+
+# Test data
+numeros = [10, 20, 30, 40, 50]
+
+# Call function and store results
+resultados = calcular_estadisticas(numeros)
+
+# Print results
+cout("Lista original:", numeros)
+cout("Suma total:", resultados[0])
+cout("Media:", resultados[1])
+
+
+# Define functions for linear regression
+funcion media(lista) {
+    suma = 0
+    n = 0
+    for i in lista:
+        suma = suma + i
+        n = n + 1
+    end
+    return suma / n
+}
+
+funcion covarianza(x, y) {
+    n = 0
+    suma = 0
+    mx = media(x)  # Call function with parentheses
+    my = media(y)
+    
+    for i in 0, len(x), 1:
+        dx = x[i] - mx
+        dy = y[i] - my
+        prod = dx * dy
+        suma = suma + prod
+        n = n + 1
+    end
+    return suma / n - 1
+}
+
+funcion varianza(x) {
+    n = 0
+    suma = 0
+    mx = media(x)  # Call function with parentheses
+    
+    for i in 0, len(x), 1:
+        dx = x[i] - mx
+        prod = dx * dx
+        suma = suma + prod
+        n = n + 1
+    end
+    return suma / n - 1
+}
+
+funcion pendiente(x, y) {
+    m = covarianza(x, y)  # Call functions with parentheses
+    v = varianza(x)
+    return m / v
+}
+
+funcion intercepto(x, y) {
+    mx = media(x)  # Call functions with parentheses
+    my = media(y)
+    m = pendiente(x, y)
+    return my - m * mx
+}
+
+# Test data
+x = [1, 2, 3, 4, 5]
+y = [2.1, 4.0, 6.3, 8.1, 9.9]
+
+# Calculate regression parameters
+m = pendiente(x, y)  # Call functions with parentheses
+b = intercepto(x, y)
+
+cout("Pendiente:", m)
+cout("Intercepto:", b)
+
+# Plot regression line
+import numpy, matplotlib.pyplot
+
+plt = matplotlib.pyplot
+plt.figure(10)
+plt.scatter(x, y)
+
+x_line = [0, 6]
+y_line = [b + m * x_line[0], b + m * x_line[1]]
+
+plt.plot(x_line, y_line)
+plt.title("Regresión Lineal")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
+
+# Create training data
+X = [1, 2, 3, 4, 5]
+y = [2.1, 4.2, 6.1, 8.3, 10.2]
+
+# Fit linear regression
+model = fit_linear(X, y)
+
+# Make predictions
+X_new = [6, 7, 8]
+predictions = predict_linear(model, X_new)
+
+# Print results
+cout(predictions)
