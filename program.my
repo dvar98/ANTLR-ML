@@ -1,4 +1,7 @@
-x = [1, 2, 3, 4, 5];
-y = [2, 4, 5, 4, 5];
-regression(x, y, slope, intercept);
-print(slope, intercept);
+# Declaración de variables
+x = 10
+y = 20
+
+# Operaciones aritméticas y matrices
+z = x + y
+cout("La suma de x e y es:", z)
