@@ -20,6 +20,7 @@ stmt
     | file_write_stmt
     | file_close_stmt
     | return_stmt
+    | classify_stmt
     ;
 
 print_stmt
@@ -146,7 +147,11 @@ while_stmt
 condition
     : expr ('>' | '<' | '==' | '!=') expr
     ;
-
+    
+classify_stmt
+    : 'classify' '(' expr ')'
+    ;
+    
 IDENT
     : [a-zA-Z_][a-zA-Z0-9_]*( '.' [a-zA-Z_][a-zA-Z0-9_]* )*
     ;

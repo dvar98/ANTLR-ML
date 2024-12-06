@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import random
 from generated.MyLangVisitor import MyLangVisitor
 from generated.MyLangParser import MyLangParser
 
@@ -9,6 +10,8 @@ class MyLangInterpreter(MyLangVisitor):
         self.variables = {}
         self.functions = {}
         self.global_env = {}
+        self.global_env['k_means_clustering'] = k_means_clustering
+        self.mlp_weights = self.initialize_mlp()
 
     def translate_expr_stmt(self, ctx, indent=''):
         expr_py = self.translate_expr_to_python(ctx.expr())
@@ -650,3 +653,78 @@ class MyLangInterpreter(MyLangVisitor):
                 raise ValueError(f"Error al cerrar archivo '{file_var_name}': {str(e)}")
         else:
             raise ValueError(f"Archivo '{file_var_name}' no está abierto")
+    
+    def initialize_mlp(self):
+        np.random.seed(42)
+        input_size = 3  # [SUMA, ENTERO, REAL]
+        hidden_size = 6
+        output_size = 3  # Número de clases (SUMA, ENTERO, REAL)
+        weights = {
+            "input_hidden": np.random.rand(input_size, hidden_size) - 0.5,
+            "hidden_output": np.random.rand(hidden_size, output_size) - 0.5,
+        }
+        return weights
+
+    def mlp_forward(self, x):
+        # Propagación hacia adelante
+        hidden = np.tanh(np.dot(x, self.mlp_weights["input_hidden"]))
+        output = np.dot(hidden, self.mlp_weights["hidden_output"])
+        return np.argmax(output)
+
+    def visitClassify_stmt(self, ctx):
+        expr_value = self.visit(ctx.expr())  # Evalúa la expresión
+        expr_features = self.extract_features(ctx.expr())  # Extrae las características
+        
+        # Clasifica usando el perceptrón
+        class_idx = self.mlp_forward(expr_features)
+        classes = ["SUMA", "ENTERO", "REAL"]
+        result = classes[class_idx]
+        
+        print(f"Resultado de classify({expr_value}): {result}")
+        return result
+
+    def extract_features(self, expr):
+        expr_text = expr.getText()
+        features = [0, 0, 0]  # [SUMA, ENTERO, REAL]
+        
+        # Clasificar como SUMA si se encuentra el operador "+"
+        if '+' in expr_text:
+            features[0] = 1  # SUMA
+        
+        # Clasificar como ENTERO o REAL dependiendo si es un número
+        if expr.NUMBER():  
+            features[1] = 1 if '.' not in expr_text else 0  # ENTERO si no tiene punto decimal
+            features[2] = 1 if '.' in expr_text else 0  # REAL si tiene punto decimal
+        
+        return np.array(features)
+        
+def k_means_clustering(data, k, max_iterations=100):
+    k = int(k)
+    max_iterations = int(max_iterations)
+    # Seleccionar k centroides iniciales aleatoriamente
+    centroids = random.sample(data, k)
+    print(centroids)
+    
+    for _ in range(max_iterations):
+        # Asignar cada punto al centroide más cercano
+        clusters = [[] for _ in range(k)]
+        for point in data:
+            distances = [sum((p - c) ** 2 for p, c in zip(point, centroid)) for centroid in centroids]
+            closest_centroid = distances.index(min(distances))
+            clusters[closest_centroid].append(point)
+        
+        # Calcular nuevos centroides
+        new_centroids = []
+        for cluster in clusters:
+            if cluster:  # Evitar dividir por cero
+                new_centroids.append([sum(coord) / len(cluster) for coord in zip(*cluster)])
+            else:
+                new_centroids.append(random.choice(data))  # Reasignar un centroide vacío
+        
+        # Verificar convergencia
+        if new_centroids == centroids:
+            break
+        
+        centroids = new_centroids
+    
+    return clusters, centroids
