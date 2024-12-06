@@ -20,7 +20,7 @@ class MyLangInterpreter(MyLangVisitor):
     def visitAssign_stmt(self, ctx):
         var_name = ctx.IDENT().getText()
         value = self.visit(ctx.expr())
-        print(f"Asignando: {var_name} = {value}")  # Depuración
+        #print(f"Asignando: {var_name} = {value}")  # Depuración
         self.variables[var_name] = value
         self.global_env[var_name] = value
         return value
@@ -37,7 +37,7 @@ class MyLangInterpreter(MyLangVisitor):
     
         params_str = ", ".join(params)
         func_code = f"def {func_name}({params_str}):\n{body_code}"
-        print(f"Definiendo función en Python:\n{func_code}")
+        #print(f"Definiendo función en Python:\n{func_code}")
         exec(func_code, self.global_env)
     
     def visitFunc_call(self, ctx):
@@ -45,7 +45,7 @@ class MyLangInterpreter(MyLangVisitor):
         args = [self.translate_expr_to_python(expr) for expr in ctx.expr()]
         args_str = ", ".join(args)
         call_code = f"{func_name}({args_str})"
-        print(f"Ejecutando llamada a función en Python:\n{call_code}")
+        #print(f"Ejecutando llamada a función en Python:\n{call_code}")
         result = eval(call_code, self.global_env)
         return result
     
@@ -172,29 +172,11 @@ class MyLangInterpreter(MyLangVisitor):
         return f"{indent}return {expr_py}"
     
     def visitExpr(self, ctx):
-            # Manejar expresiones entre paréntesis
-        if ctx.getChildCount() == 3 and ctx.getChild(0).getText() == '(':
-            return self.visit(ctx.expr(0))
 
-        # Manejar operaciones aritméticas
-        if ctx.getChildCount() == 3:
-            left = self.visit(ctx.expr(0))
-            op = ctx.getChild(1).getText()
-            right = self.visit(ctx.expr(1))
+        # First handle parenthesized expressions
+        if ctx.getChildCount() == 3 and ctx.getChild(0).getText() == '(' and ctx.getChild(2).getText() == ')':
+            return self.visit(ctx.expr(0))  # Return the evaluated inner expression
 
-            print(f"Evaluando: {left} {op} {right}")  # Depuración
-
-            if op == '+':
-                return left + right
-            elif op == '-':
-                return left - right
-            elif op == '*':
-                return left * right
-            elif op == '/':
-                return left / right
-            elif op == '%':
-                return left % right
-        
         # Handle array expressions first
         if ctx.array_expr():
             return self.visitArray_expr(ctx.array_expr())
@@ -217,7 +199,7 @@ class MyLangInterpreter(MyLangVisitor):
             right = self.visit(ctx.expr(1))
             op = ctx.getChild(1).getText()
     
-            print(f"Evaluando: {left} {op} {right}")  # Debugging
+            #print(f"Evaluando: {left} {op} {right}")  # Debugging
     
             if left is None or right is None:
                 raise ValueError("Una de las subexpresiones no pudo evaluarse correctamente.")
@@ -226,24 +208,24 @@ class MyLangInterpreter(MyLangVisitor):
             if isinstance(left, list) and isinstance(right, list):
                 left = np.array(left)
                 right = np.array(right)
-                if op == '+':
+                if op == '*':
                     return (left + right).tolist()
-                elif op == '-':
-                    return (left - right).tolist()
-                elif op == '*':
-                    return (left @ right).tolist()  # Matrix multiplication
                 elif op == '/':
+                    return (left - right).tolist()
+                elif op == '-':
+                    return (left @ right).tolist()  # Matrix multiplication
+                elif op == '+':
                     return (left / right).tolist()
                 elif op == '%':
                     return (left % right).tolist()
             else:
-                if op == '+':
+                if op == '*':
                     return left + right
-                elif op == '-':
-                    return left - right
-                elif op == '*':
-                    return left * right
                 elif op == '/':
+                    return left - right
+                elif op == '-':
+                    return left * right
+                elif op == '+':
                     return left / right
                 elif op == '%':
                     return left % right
@@ -377,7 +359,7 @@ class MyLangInterpreter(MyLangVisitor):
         for expr_ctx in ctx.expr():
             value = self.visit(expr_ctx)
             
-            print(f"Evaluando expresión: {expr_ctx.getText()} -> {value}")  # Debugging
+            #print(f"Evaluando expresión: {expr_ctx.getText()} -> {value}")  # Debugging
             if isinstance(value, str):
                 values.append(value)
             elif value is None:
@@ -407,7 +389,7 @@ class MyLangInterpreter(MyLangVisitor):
             raise ValueError("La matriz no es invertible.")
         
     def visitArray_expr(self, ctx):
-        print(f"Visitando array: {ctx.getText()}")  # Debugging
+        #print(f"Visitando array: {ctx.getText()}")  # Debugging
         if ctx.getChildCount() == 4:  # IDENT '[' expr ']'
             array_name = ctx.IDENT().getText()
             index = self.visit(ctx.expr(0))
@@ -453,7 +435,7 @@ class MyLangInterpreter(MyLangVisitor):
         """
         # Evaluamos la condición del 'if'
         condition = self.visit(ctx.condition())
-        print(f"Evaluando condición 'if': {condition}")
+        #print(f"Evaluando condición 'if': {condition}")
         
         # Obtener todas las sentencias
         stmts = ctx.stmt()
@@ -461,12 +443,12 @@ class MyLangInterpreter(MyLangVisitor):
         mid = len(stmts) // 2
         
         if condition:
-            print("Ejecutando bloque 'if'")
+            #print("Ejecutando bloque 'if'")
             # Ejecutar primera mitad (bloque if)
             for stmt in stmts[:mid]:
                 self.visit(stmt)
         else:
-            print("Ejecutando bloque 'else'")
+            #print("Ejecutando bloque 'else'")
             # Ejecutar segunda mitad (bloque else)
             for stmt in stmts[mid:]:
                 self.visit(stmt)
@@ -477,7 +459,7 @@ class MyLangInterpreter(MyLangVisitor):
         right = self.visit(ctx.expr(1))  # Segundo lado de la comparación
         operator = ctx.getChild(1).getText()  # El operador de comparación
 
-        print(f"Comparando: {left} {operator} {right}")  # Depuración
+        #print(f"Comparando: {left} {operator} {right}")  # Depuración
         
         # Evaluamos la comparación según el operador
         if operator == '>':
@@ -497,7 +479,7 @@ class MyLangInterpreter(MyLangVisitor):
         # Obtener el rango o la lista
         range_or_list_expr = ctx.getChild(3)
         
-        print(f"range_or_list_expr: {range_or_list_expr}")  # Debugging
+        #print(f"range_or_list_expr: {range_or_list_expr}")  # Debugging
 
         # Verificar si es un rango o una lista
         if isinstance(range_or_list_expr, MyLangParser.Range_Context):
@@ -547,7 +529,7 @@ class MyLangInterpreter(MyLangVisitor):
         # Evaluamos la condición
         condition = self.visit(ctx.condition())  # La condición a evaluar
         
-        print(f"Evaluando condición: {condition}")  # Depuración
+        #print(f"Evaluando condición: {condition}")  # Depuración
 
         # Ejecutar el bloque de código mientras la condición sea verdadera
         while condition:
@@ -697,7 +679,64 @@ class MyLangInterpreter(MyLangVisitor):
             features[2] = 1 if '.' in expr_text else 0  # REAL si tiene punto decimal
         
         return np.array(features)
-        
+
+    def visitFit_stmt(self, ctx):
+        """
+        Fits a linear regression model using least squares method
+        Returns tuple of (slope, intercept)
+        """
+        var_name = ctx.IDENT().getText()
+        X = np.array(self.visit(ctx.expr(0)))
+        y = np.array(self.visit(ctx.expr(1)))
+
+        # Reshape if needed
+        if len(X.shape) == 1:
+            X = X.reshape(-1, 1)
+
+        # Add bias term
+        X_b = np.c_[np.ones((X.shape[0], 1)), X]
+
+        # Calculate parameters using normal equation
+        theta = np.linalg.inv(X_b.T.dot(X_b)).dot(X_b.T).dot(y)
+
+        # Store model parameters
+        model = {
+            'intercept': theta[0],
+            'coef': theta[1:],
+            'theta': theta
+        }
+
+        self.variables[var_name] = model
+        print(f"Linear regression fitted. Coefficients: {model['coef']}, Intercept: {model['intercept']}")
+        return model
+
+    def visitPredict_stmt(self, ctx):
+        """
+        Makes predictions using a fitted linear regression model
+        """
+        var_name = ctx.IDENT(0).getText()
+        model_name = ctx.IDENT(1).getText()
+        X_new = np.array(self.visit(ctx.expr()))
+
+        if model_name not in self.variables:
+            raise ValueError(f"Model {model_name} not found")
+
+        model = self.variables[model_name]
+
+        # Reshape if needed
+        if len(X_new.shape) == 1:
+            X_new = X_new.reshape(-1, 1)
+
+        # Add bias term
+        X_new_b = np.c_[np.ones((X_new.shape[0], 1)), X_new]
+
+        # Make predictions
+        predictions = X_new_b.dot(model['theta'])
+
+        self.variables[var_name] = predictions.tolist()
+        print(f"Made predictions using linear regression model")
+        return predictions.tolist()
+
 def k_means_clustering(data, k, max_iterations=100):
     k = int(k)
     max_iterations = int(max_iterations)

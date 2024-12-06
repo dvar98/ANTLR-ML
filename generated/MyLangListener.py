@@ -224,5 +224,23 @@ class MyLangListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by MyLangParser#fit_stmt.
+    def enterFit_stmt(self, ctx:MyLangParser.Fit_stmtContext):
+        pass
+
+    # Exit a parse tree produced by MyLangParser#fit_stmt.
+    def exitFit_stmt(self, ctx:MyLangParser.Fit_stmtContext):
+        pass
+
+
+    # Enter a parse tree produced by MyLangParser#predict_stmt.
+    def enterPredict_stmt(self, ctx:MyLangParser.Predict_stmtContext):
+        pass
+
+    # Exit a parse tree produced by MyLangParser#predict_stmt.
+    def exitPredict_stmt(self, ctx:MyLangParser.Predict_stmtContext):
+        pass
+
+
 
 del MyLangParser

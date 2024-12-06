@@ -129,5 +129,15 @@ class MyLangVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by MyLangParser#fit_stmt.
+    def visitFit_stmt(self, ctx:MyLangParser.Fit_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by MyLangParser#predict_stmt.
+    def visitPredict_stmt(self, ctx:MyLangParser.Predict_stmtContext):
+        return self.visitChildren(ctx)
+
+
 
 del MyLangParser

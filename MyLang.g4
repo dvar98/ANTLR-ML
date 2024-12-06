@@ -20,7 +20,8 @@ stmt
     | file_write_stmt
     | file_close_stmt
     | return_stmt
-    | classify_stmt
+    | fit_stmt
+    | predict_stmt
     ;
 
 print_stmt
@@ -41,6 +42,7 @@ cond_stmt
 
 expr
     : expr ('+' | '-' | '*' | '/' | '%' | 'T' | 'inv') expr
+    | '|' expr '|' 
     | array_op
     | array_expr
     | IDENT
@@ -147,11 +149,15 @@ while_stmt
 condition
     : expr ('>' | '<' | '==' | '!=') expr
     ;
-    
-classify_stmt
-    : 'classify' '(' expr ')'
+
+fit_stmt
+    : IDENT '=' 'fit_linear' '(' expr ',' expr ')'  // X, y data
     ;
-    
+
+predict_stmt
+    : IDENT '=' 'predict_linear' '(' IDENT ',' expr ')'  // model, X_new
+    ;
+
 IDENT
     : [a-zA-Z_][a-zA-Z0-9_]*( '.' [a-zA-Z_][a-zA-Z0-9_]* )*
     ;

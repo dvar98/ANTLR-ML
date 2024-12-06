@@ -1,7 +1,80 @@
-# Declaración de variables
-x = 10
-y = 20
+# Define functions for linear regression
+funcion media(lista) {
+    suma = 0
+    n = 0
+    for i in lista:
+        suma = suma + i
+        n = n + 1
+    end
+    return suma / n
+}
 
-# Operaciones aritméticas y matrices
-z = x + y
-cout("La suma de x e y es:", z)
+funcion covarianza(x, y) {
+    n = 0
+    suma = 0
+    mx = media(x)  # Call function with parentheses
+    my = media(y)
+    
+    for i in 0, len(x), 1:
+        dx = x[i] - mx
+        dy = y[i] - my
+        prod = dx * dy
+        suma = suma + prod
+        n = n + 1
+    end
+    return suma / n - 1
+}
+
+funcion varianza(x) {
+    n = 0
+    suma = 0
+    mx = media(x)  # Call function with parentheses
+    
+    for i in 0, len(x), 1:
+        dx = x[i] - mx
+        prod = dx * dx
+        suma = suma + prod
+        n = n + 1
+    end
+    return suma / n - 1
+}
+
+funcion pendiente(x, y) {
+    m = covarianza(x, y)  # Call functions with parentheses
+    v = varianza(x)
+    return m / v
+}
+
+funcion intercepto(x, y) {
+    mx = media(x)  # Call functions with parentheses
+    my = media(y)
+    m = pendiente(x, y)
+    return my - m * mx
+}
+
+# Test data
+x = [1, 2, 3, 4, 5]
+y = [2.1, 4.0, 6.3, 8.1, 9.9]
+
+# Calculate regression parameters
+m = pendiente(x, y)  # Call functions with parentheses
+b = intercepto(x, y)
+
+cout("Pendiente:", m)
+cout("Intercepto:", b)
+
+# Plot regression line
+import numpy, matplotlib.pyplot
+
+plt = matplotlib.pyplot
+plt.figure(10)
+plt.scatter(x, y)
+
+x_line = [0, 6]
+y_line = [b + m * x_line[0], b + m * x_line[1]]
+
+plt.plot(x_line, y_line)
+plt.title("Regresión Lineal")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
